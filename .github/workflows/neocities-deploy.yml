@@ -17,6 +17,7 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     # When the dist_dir is ready, deploy it to neocities
+    - run: mkdir public; cp -r source/* public/*
     - name: Deploy to neocities
       uses: bcomnes/deploy-to-neocities@v1
       with:
