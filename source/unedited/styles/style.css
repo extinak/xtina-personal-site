@@ -1,0 +1,30 @@
+
+:root {
+	--atomic_tan: #faa27f;
+	--coral: #ff8c61;
+	--cinn_satin: #ce6a85;
+	--sugar_plum: #985277;
+	--dark_byz: #5C374c;
+	/* sourced from https://coolors.co/faa275-ff8c61-ce6a85-985277-5c374c */ 
+}
+body {
+    background-color: var(--atomic_tan);
+    font-family: Georgia, serif;
+    font-size: 1rem;
+}
+
+a:link {
+    color: var(--sugar_plum);
+}
+
+a:visited {
+    color: var(--dark_byz);
+}
+
+a:hover {
+    color: var(--cinn_satin);
+}
+
+a:active {
+    color: var(--coral);
+}
