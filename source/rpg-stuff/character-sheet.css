@@ -1,0 +1,122 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.sheet-container {
+    color: #fff;
+    background-color: #5995DA;  /* Blue */
+    padding: 20px 0;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    flex-direction: column;
+}
+
+.horizontal-section {
+    border: 1px solid #fff;  /* For debugging */
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: row;
+    padding: 25px 10px;
+  }
+
+.vertical-section {
+    border: 1px solid #fff;  /* For debugging */
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+.box {
+    /* justify-content: flex-start; */
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: row;
+}
+
+/* trying to get moon sign to the bottom of it's column
+
+.end {
+    align-self: flex-end;
+} */
+
+.box-title {
+    border: 1px solid red;  /* For debugging */ 
+    background-color: black;
+    color: white;
+    width: 100px;
+    height: 20px;
+}
+
+.box-title-blank {
+    border: 1px solid red;  /* For debugging */ 
+    background-color: white;
+    width: 100px;
+    height: 20px;
+}
+
+.text-entry {
+    border: 1px solid black;  /* For debugging */ 
+    width: 200px;
+}
+
+.stat-entry {
+    border: 1px solid black;  /* For debugging */ 
+    width: 75px;
+}
+
+.modifier-entry {
+    border: 1px solid black;  /* For debugging */ 
+    width: 50px;
+}
+
+.modifier-box {
+    border: 1px solid black;
+    /* top/bottom left/right */
+    padding: 10px 50px;
+    width: 50px;
+}
+
+.portait {
+    border: 1px solid black;
+    height: 100px;
+}
+
+.ability-box {
+    border: 1px solid black;
+    height: 250px;
+    width: 500px;
+}
+
+.flex {
+    flex: 1
+}
+
+.tiny-items {
+    border: 1px solid black;
+    width: 400px;
+    height: 100px;
+}
+
+.item {
+    border: 1px solid black;
+    width: 400px;
+    height: 25px;
+}
+
+.description {
+    text-wrap: wrap;
+    flex: initial;
+}
+
+.item-section {
+    max-width: 400px;
+}
+
+.other-notes {
+    border: 1px solid black;
+    height: 500px;
+}
