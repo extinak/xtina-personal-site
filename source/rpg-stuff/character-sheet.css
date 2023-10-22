@@ -2,11 +2,11 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    color: #d8d4cf;
 }
 
 .sheet-container {
-    color: #fff;
-    background-color: #5995DA;  /* Blue */
+    background-color: #004daa;
     padding: 20px 0;
     display: flex;
     justify-content: center;
@@ -15,7 +15,7 @@
 }
 
 .horizontal-section {
-    border: 1px solid #fff;  /* For debugging */
+    border: 1px solid rgb(48, 52, 54);  /* For debugging */
     display: flex;
     flex-wrap: wrap;
     flex-direction: row;
@@ -23,7 +23,7 @@
   }
 
 .vertical-section {
-    border: 1px solid #fff;  /* For debugging */
+    border: 1px solid rgb(48, 52, 54);  /* For debugging */
     display: flex;
     flex-wrap: wrap;
     flex-direction: column;
@@ -44,7 +44,7 @@
 } */
 
 .box-title {
-    border: 1px solid red;  /* For debugging */ 
+    border: 1px solid #bf2237;  /* For debugging */ 
     background-color: black;
     color: white;
     width: 100px;
@@ -52,41 +52,41 @@
 }
 
 .box-title-blank {
-    border: 1px solid red;  /* For debugging */ 
-    background-color: white;
+    border: 1px solid #bf2237;  /* For debugging */ 
+    background-color: #131516;
     width: 100px;
     height: 20px;
 }
 
 .text-entry {
-    border: 1px solid black;  /* For debugging */ 
+    border: 1px solid rgb(48, 52, 54);  /* For debugging */ 
     width: 200px;
 }
 
 .stat-entry {
-    border: 1px solid black;  /* For debugging */ 
+    border: 1px solid rgb(48, 52, 54);  /* For debugging */ 
     width: 75px;
 }
 
 .modifier-entry {
-    border: 1px solid black;  /* For debugging */ 
+    border: 1px solid rgb(48, 52, 54);  /* For debugging */ 
     width: 50px;
 }
 
 .modifier-box {
-    border: 1px solid black;
+    border: 1px solid rgb(48, 52, 54);
     /* top/bottom left/right */
     padding: 10px 50px;
     width: 50px;
 }
 
 .portait {
-    border: 1px solid black;
+    border: 1px solid rgb(48, 52, 54);
     height: 100px;
 }
 
 .ability-box {
-    border: 1px solid black;
+    border: 1px solid rgb(48, 52, 54);
     height: 250px;
     width: 500px;
 }
@@ -96,13 +96,13 @@
 }
 
 .tiny-items {
-    border: 1px solid black;
+    border: 1px solid rgb(48, 52, 54);
     width: 400px;
     height: 100px;
 }
 
 .item {
-    border: 1px solid black;
+    border: 1px solid rgb(48, 52, 54);
     width: 400px;
     height: 25px;
 }
@@ -117,6 +117,6 @@
 }
 
 .other-notes {
-    border: 1px solid black;
+    border: 1px solid rgb(48, 52, 54);
     height: 500px;
 }
