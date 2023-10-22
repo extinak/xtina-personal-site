@@ -1,0 +1,1317 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Eagle+Lake&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IM+Fell+DW+Pica&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=0.75">
+    <script>
+
+        /* things to do:
+
+        small things:
+            kindred:
+                - add race specs
+                - print short desc somewhere
+                - add glamours for elf and grimalkin
+                - finish mossling and add knacks
+                - add last one from book
+            class:
+                - add short desc
+                - knight: add liege
+                - enchanter: add runes and glamours. get bonus glamour from being an elf
+                - magician: switch to classic spellbooks
+                    - add dolmenwood region-specific spells too, as seperate table
+                - friar: add spells per day table
+            general:
+                - standardize capitalization (mostly for backgrounds)
+                - checkout item generation
+                - add alignment
+                - add faction
+
+        big things:
+            kindred:
+                - add dwarf and halfling (maybe OG elf?)
+                    - change dwarf/halfling to dolmenwood style. No status bonuses, but other interesting features. Doesn't need to be balanced.
+                    - and no infravision (I don't like it).
+                    - create backgrounds for dwarves and halfings
+                - add lizardman and dog brother or gnoll
+                - implement backgrounds for humans
+                - implement missing kindred features
+                - add tables from dolmenwood (this is so cool but a lot of work)
+                    - parse text from pdf like Kaleb suggested?
+            class:
+                - add mystic and wreslter classes
+            general:
+                - add region toggle
+                    - change default language, availible kindred and classes
+                - make darkmode colors default (or add color schemes or something, idk)
+                - update test at top of page
+                - add link to original
+
+        */
+
+        var essential_items = ['backpack', 'tinder box', 'wineskin',
+            'rations (7)'];
+        var light_source_items = ['lantern (with 2 oil flasks)', 'torches (6)'];
+        var mundane_items = ['small hammer', 'iron spikes (12)', 'mirror',
+            'rope (50\')', 'large sack', 'small sack',
+            'wolfsbane', '10-foot pole'];
+        var melee_weapons = ['battle axe', 'hand axe', 'dagger', 'silver dagger',
+            'short sword', 'sword', 'two-handed sword', 'mace',
+            'club', 'pole arm', 'spear', 'war hammer'];
+        var ranged_weapons = ['crossbow (30 quarrels)', 'long bow (20 arrows)',
+            'short bow (20 arrows)', 'sling (30 stones)',
+            'javelin'];
+        var armor = ['gambeson', 'chain mail', 'plate mail'];
+
+        var to_hit_martial = [1, 1, 2, 3, 3, 4, 5, 5, 6, 7, 7, 8, 9, 9, 10]
+        var to_hit_semi_martial = [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7]
+        var to_hit_non_martial = [0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4]    
+
+        var default_alignments = ["lawful", "neutral", "chaotic"]
+        
+        // Couldn't figure out why default_skills map would get updated even if it was never directly assigned to. Some fucking magic of javascript.
+        // Ex. switching from Breggle Fighter -> Elf Fighter -> Breggle Fighter would have skill targets of 5 for spot and listen still.
+        // const default_skills = new Map([
+        //     ["Listen", [0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]],
+        //     ["Spot", [0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]],
+        //     ["Survival", [0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]]
+        // ])
+
+        const encumbrances = {
+            'battle axe': 50, club: 50, 'crossbow (30 quarrels)': 50, dagger: 10,
+            'hand axe': 30, javelin: 20, 'long bow (20 arrows)': 30, mace: 30,
+            'pole arm': 150, 'short bow (20 arrows)': 30, 'silver dagger': 10,
+            'sling (30 stones)': 20, spear: 30, quarterstaff: 40, sword: 60,
+            'short sword': 30, 'two-handed sword': 150, 'war hammer': 30,
+            gambeson: 200, 'chain mail': 400, 'plate mail': 500, shield: 100
+        };
+
+        const appearances = ['aquiline', 'athletic', 'barrel-chested', 'boney',
+            'brawny', 'brutish', 'bullnecked', 'chiseled',
+            'coltish', 'corpulent', 'craggy', 'delicate',
+            'furrowed', 'gaunt', 'gorgeous', 'grizzled',
+            'haggard', 'handsome', 'hideous', 'lanky', 'pudgy',
+            'ripped', 'rosy', 'scrawny', 'sinewy', 'slender',
+            'slumped', 'solid', 'square-jawed', 'statuesque',
+            'towering', 'trim', 'weathered', 'willowy', 'wiry',
+            'wrinkly']
+
+        function get_appearance() {
+            return choose(appearances);
+        }
+
+        function get_generic_gear() {
+            var inv = [].concat(essential_items);
+            inv.push(choose(light_source_items));
+            var items = [].concat(mundane_items);
+            for (i = 0; i < 3; i++) {
+                var item = choose(items);
+                inv.push(item);
+                items = items.filter(k => k !== item);
+            }
+            return inv;
+        }
+
+        const wrap = (s) => s.replace(
+            /(?![^\n]{1,60}$)([^\n]{1,60})\s/g, '$1\n'
+        );
+
+        function pad(len, string) {
+            //https://stackoverflow.com/questions/14343844/create-a-string-of-variable-length-filled-with-a-repeated-character
+            
+            //adds whitespace = len to the start of a string, then slice off len from the end of the string.
+            // so, something like: (2, "1")  = " 1"
+            // and                 (2, "10") = "10"
+            return (new Array(len + 1).join(' ') + string).slice(-len);
+        }
+
+        function consolidator(some_array) {
+            var stuff = {};
+            for (var i = 0; i < some_array.length; i++) {
+                if (stuff.hasOwnProperty(some_array[i])) {
+                    stuff[some_array[i]] += 1;
+                } else {
+                    stuff[some_array[i]] = 1;
+                }
+            }
+            var consolidated = []
+            const keys = Object.keys(stuff);
+            for (const key of keys) {
+                if (stuff[key] > 1) {
+                    consolidated.push(`${key} (x${stuff[key]})`);
+                } else {
+                    consolidated.push(key);
+                }
+            }
+            return consolidated
+        }
+
+        function resolve_skills(skills_1, skills_2) {
+            skills_1.forEach((val, key, map) => {
+                var matching_skill = skills_2.get(key)
+                if(matching_skill !== undefined) {
+                    for (let i=0; i <matching_skill.length; i++) {
+                        var original = val[i];
+                        var competitor = matching_skill[i];
+                        if (competitor < original) {
+                            val[i] = competitor;
+                        }
+                    }
+                    skills_1.set(key, val);
+                }
+            })
+
+            return skills_1;
+        }
+
+        function choose(some_array) {
+            return some_array[Math.floor(Math.random() * some_array.length)]
+        }
+
+        function getRndInteger(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        function d(how_many, sides) {
+            var total = 0;
+            var i;
+            for (i = 0; i < how_many; i++) {
+                total += getRndInteger(1, sides);
+            }
+            return total;
+        }
+
+        function get_background() {
+            var bgs = [];
+            bgs = bgs.concat(Array(3).fill('Animal trainer'));
+            bgs = bgs.concat(Array(2).fill('Armorer'));
+            bgs = bgs.concat(Array(4).fill('Baker'));
+            bgs = bgs.concat(Array(3).fill('Blacksmith'));
+            bgs = bgs.concat(Array(1).fill('Bookbinder'));
+            bgs = bgs.concat(Array(4).fill('Bowyer/fletcher'));
+            bgs = bgs.concat(Array(4).fill('Brewer'));
+            bgs = bgs.concat(Array(3).fill('Butcher'));
+            bgs = bgs.concat(Array(3).fill('Carpenter'));
+            bgs = bgs.concat(Array(3).fill('Chandler'));
+            bgs = bgs.concat(Array(3).fill('Cooper'));
+            bgs = bgs.concat(Array(2).fill('Coppersmith'));
+            bgs = bgs.concat(Array(10).fill('Farmer'));
+            bgs = bgs.concat(Array(4).fill('Fisher'));
+            bgs = bgs.concat(Array(4).fill('Furrier'));
+            bgs = bgs.concat(Array(1).fill('Glassblower'));
+            bgs = bgs.concat(Array(4).fill('Hunter'));
+            bgs = bgs.concat(Array(3).fill('Jeweller'));
+            bgs = bgs.concat(Array(3).fill('Lorimer'));
+            bgs = bgs.concat(Array(1).fill('Cartographer'));
+            bgs = bgs.concat(Array(3).fill('Mason'));
+            bgs = bgs.concat(Array(3).fill('Miner'));
+            bgs = bgs.concat(Array(3).fill('Potter'));
+            bgs = bgs.concat(Array(2).fill('Roper'));
+            bgs = bgs.concat(Array(3).fill('Sailor'));
+            bgs = bgs.concat(Array(3).fill('Shipwright'));
+            bgs = bgs.concat(Array(3).fill('Tailor'));
+            bgs = bgs.concat(Array(3).fill('Tanner'));
+            bgs = bgs.concat(Array(3).fill('Thatcher'));
+            bgs = bgs.concat(Array(3).fill('Lumberjack'));
+            bgs = bgs.concat(Array(2).fill('Vinter'));
+            bgs = bgs.concat(Array(1).fill('Noble bastard'));
+            return bgs;
+        }
+
+        function get_personality(num = 2) {
+            var traits = ['boorish', 'aggressive', 'arrogant', 'cruel',
+                'compulsive', 'rude', 'paranoid', 'greedy', 'hateful',
+                'ambitious', 'insane', 'intolerant', 'lustful',
+                'pessimistic', 'absent-minded', 'amiable', 'nervous',
+                'eccentric', 'bookish', 'chill', 'mischievous',
+                'loquacious', 'homesick', 'humble', 'curious',
+                'flirtatious', 'foolhardy', 'flamboyant', 'stoic',
+                'gregarious', 'secretive', 'naive', 'proud', 'taciturn',
+                'superstitious', 'devoted', 'friendly', 'faithful',
+                'eloquent', 'brave', 'cautious', 'celibate',
+                'generous', 'cheerful', 'confident', 'polite',
+                'resolute', 'persuasive', 'industrious', 'strict',
+                'merciful', 'gentle-hearted', 'protective', 'helpful',
+                'honorable', 'loyal', 'shrewd', 'pure'];
+            var selected = [];
+            for (i = 0; i < num; i++) {
+                var trait = choose(traits);
+                selected.push(trait);
+                traits = traits.filter(k => k !== trait);
+            }
+            return selected.join(', ');
+
+        }
+
+        function calculate_xp_mod(prime_abilities) {
+            if (prime_abilities.every(pa => pa >= 16)) {
+                return 10;
+            } else if  (prime_abilities.every(pa => pa >= 13)){
+                return 5;
+            } else if (prime_abilities.some(pa => pa <= 5)) {
+                return -20;
+            } else if (prime_abilities.some(pa => pa <= 8)) {
+                return -10;
+            } else {
+                return 0;
+            }
+        }
+
+        class Abilities {
+            constructor() {
+                if (document.getElementById("use_stat_input").checked) {
+                    this.strength = document.getElementById('str').value;
+                    this.dexterity = document.getElementById('dex').value;
+                    this.constitution = document.getElementById('con').value;;
+                    this.intelligence = document.getElementById('int').value;;
+                    this.wisdom = document.getElementById('wis').value;;
+                    this.charisma = document.getElementById('cha').value;;
+                } else {
+                    this.strength = d(3, 6);
+                    this.dexterity = d(3, 6);
+                    this.constitution = d(3, 6);
+                    this.intelligence = d(3, 6);
+                    this.wisdom = d(3, 6);
+                    this.charisma = d(3, 6);
+                }
+
+                this.mod = [null, null, null, '-3', '-2', '-2', '-1', '-1',
+                    '-1', '  ', '  ', '  ', '  ', '+1', '+1', '+1',
+                    '+2', '+2', '+3'];
+            }
+            get abi_list() {
+                return [this.strength, this.dexterity, this.constitution,
+                this.intelligence, this.wisdom, this.charisma]
+            }
+            get strmod() {
+                return this.mod[this.strength]
+            }
+            get dexmod() {
+                return this.mod[this.dexterity]
+            }
+            get conmod() {
+                return this.mod[this.constitution]
+            }
+            get intmod() {
+                return this.mod[this.intelligence]
+            }
+            get wismod() {
+                return this.mod[this.wisdom]
+            }
+            get chamod() {
+                return this.mod[this.charisma]
+            }
+            say_abis() {
+                return `
+Strength:     ${pad(2, this.strength)} ${this.strmod}
+Intelligence: ${pad(2, this.intelligence)} ${this.intmod}
+Wisdom:       ${pad(2, this.wisdom)} ${this.wismod}
+Dexterity:    ${pad(2, this.dexterity)} ${this.dexmod}
+Constitution: ${pad(2, this.constitution)} ${this.conmod}
+Charisma:     ${pad(2, this.charisma)} ${this.chamod}`
+            }
+        }
+
+        class Breggle {
+            constructor() {
+                this.name = "Breggle";
+                this.region = "Dolmenwood"
+                this.languages = ["Woldish", "Gaffe", "Caprice"];
+                this.kindred_type = "Mortal";
+                this.short_desc = "Goat-headed folk whose horn length indicates their social standing.";
+                this.specs = 'Thick fur, gaze at level 4, can attack with horns that get better upon leveling up.';
+                this.bgs = [
+                    "Alchemist's assistant",
+                    "Angler",
+                    "Beekeeper",
+                    "Blacksmith",
+                    "Brewer",
+                    "Chandler",
+                    "Devil goat handler",
+                    "Gambler",
+                    "Grave digger",
+                    "Merchant",
+                    "Onion farmer",
+                    "Page",
+                    "Pig farmer",
+                    "Servant",
+                    "Smuggler",
+                    "Sorcerer's assistant",
+                    "Standard-bearer",
+                    "Thatcher",
+                    "Turnip farmer",
+                    "Vagrant"
+                ]
+                this.heads = [
+                    "Dented helm with coat of arms",
+                    "Ears pierced with nails or rings",
+                    "Long, curly locks",
+                    "Long, floppy ears",
+                    "Narrow, pointed ears",
+                    "One bent horn, one straight",
+                    "One horn broken off",
+                    "Silver stripe in hair",
+                    "Slick oiled hair",
+                    "Spiky ginger hair",
+                    "Thin neck, hefty head",
+                    "Third nub horn on forehead"
+                ]
+                this.kindred_skills = new Map();
+            }
+        }
+
+        class Elf {
+            constructor() {
+                this.name = "Elf";
+                this.region = "Dolmenwood";
+                this.languages = ["Woldish", "Sylvan", "High Elfish"];
+                this.kindred_type = "Fairy";
+                this.short_desc = "Ageless faeries who have crossed into the mortal world for reasons they seldom reveal."
+                this.specs = "Knows a single glamour, and better than mortals at listening and spotting. +2 resistance to magic, +2 to reactions agaisnt mortals, and take 1 additional damage from cold iron weapons. Immune to non-magic diseases."
+                this.bgs = [
+                    "Chronicler",
+                    "Coiffeur",
+                    "Confectioner",
+                    "Courtier",
+                    "Dream thief",
+                    "Elk hunter",
+                    "Explorer",
+                    "Frost sculptor",
+                    "Harpist",
+                    "Highway robber",
+                    "Librarian",
+                    "Mountebank",
+                    "Nut forager",
+                    "Peacock trainer",
+                    "Poet",
+                    "Swordsmith",
+                    "Tailor",
+                    "Thespian",
+                    "Unicorn Handler",
+                    "Vintner"
+                ]
+                this.kindred_skills = new Map([
+                    ["Listen", [0, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]],
+                    ["Spot", [0, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]]
+                ])
+            }
+        }
+
+        class Grimalkin {
+            constructor() {
+                this.name = "Grimalkin";
+                this.region = "Dolmenwood";
+                this.languages = ["Woldish", "Mewl"];
+                this.kindred_type = "Fairy";
+                this.short_desc = "Mercurial feline fairies who shift between three different forms.";
+                this.specs = "Can't use large weapons, armor must be fitted to a small form. +2 AC vs large creatures. Healing after eating giant rodents. Knows a single glamour. Skilled listeners. +2 to magic res. Can shape-shift into chester at will and a wilder once a day. Takes 1 additional damage from cold iron."
+                this.bgs = [
+                    "Alchemist's aide",
+                    "Angler",
+                    "Barber",
+                    "Card-sharp",
+                    "Catnip brewer",
+                    "Clothier",
+                    "Duellist",
+                    "Highway robber",
+                    "Knifemaker",
+                    "Libertine",
+                    "Mariner",
+                    "Pheasant poacher",
+                    "Rat hunter",
+                    "Spy",
+                    "Stage Magician",
+                    "Swinder",
+                    "Thespian",
+                    "Trapper/ferrier",
+                    "Vole famrer",
+                    "Weasel tamer"
+                ];
+                this.kindred_skills = new Map([
+                    ["Listen", [0, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]]
+                ])
+            }
+        }
+
+        class Human {
+            constructor() {
+                this.name = "Human";
+                this.region = "Phaedra";
+                this.languages = ["Common"];
+                this.kindred_type = "Mortal";
+                this.short_desc = "The folk of the day-to-day world, in all the variety we know."
+                this.specs = "Act first in tied initiative, loyalty of retainers is increased by 1, and receive a bonus 10% to XP."
+                this.bgs = get_background();
+                this.kindred_skills = new Map();
+            }
+        }
+
+        //TODO incomplete
+        class Mossling {
+            constructor() {
+                this.name = "Mossling";
+                this.region = "Dolmenwood";
+                this.languages = ["Woldish", "Munch"];
+                this.kindred_type = "Mortal";
+                this.short_desc = "Gnarled, woody humanoids whose fertile flflesh hosts mosses, moulds, and fungi.";
+                this.specs = "Armor must be tailored to their small size and can't wield large weapons. Prefer to use non-metal armors (replaced during character creation). Receives a random knack (a special set of skills). +4 to fungus saving throws"
+                this.bgs = [
+                    "Bark tailor",
+                    "Boar hunter",
+                    "Cheesemaker",
+                    "Compost raker",
+                    "Fungologist",
+                    "Fungus farmer",
+                    "Gambler",
+                    "Horn Blower",
+                    "Moss Brewer",
+                    "Moss farmer",
+                    "Night forger",
+                    "Oracle's apprentice",
+                    "Pipe maker",
+                    "Sausage maker",
+                    "Squirrel trainer",
+                    "Swineherd",
+                    "Tavernkeep",
+                    "Vagrant",
+                    "Worm farmer",
+                    "Yeast farmer"
+                ]
+                this.kindred_skills = new Map([
+                    ["Survival", [0, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]]
+                ])
+            }
+        }
+
+        class Cleric {
+            constructor() {
+                this.name = "Cleric";
+                this.hd = 6;
+                this.max_level = 15;
+                this.xp_progression = [1500, 3000, 6000, 12000, 24000, 48000,
+                    96000, 190000, 290000, 390000, 490000,
+                    590000, 690000, 790000];
+                this.to_hit_array = to_hit_semi_martial;
+                this.post_name_level_hp_gain = 1;
+                this.doom = [11, 11, 10, 10, 9, 9, 8, 8, 7, 7, 6, 6, 5, 5, 4]
+                this.ray = [12, 12, 11, 11, 10, 10, 9, 9, 8, 8, 7, 7, 6, 6, 5]
+                this.hold = [13, 13, 12, 12, 11, 11, 10, 10, 9, 9, 8, 8, 7, 7, 6]
+                this.blast = [16, 16, 15, 15, 14, 14, 13, 13, 12, 12, 11, 11, 10, 10, 9]
+                this.spell = [14, 14, 13, 13, 12, 12, 11, 11, 10, 10, 9, 9, 8, 8, 7]
+                this.specs = wrap('May use all armor and shields and any weapons, but only divine magic armaments. Divine magic. Turning undead. Selects a Holy Order at level 2. Must follow tenents of their church or be excommunicated.');
+                this.extra_langugages = ['Voltali']
+                this.xp_mod = (abis) => calculate_xp_mod([abis.wisdom])
+                this.alignments = ["lawful", "neutral"]
+            }
+
+            class_equipment() {
+                var inv = ['wooden holy symbol'];
+                inv.push(choose(armor));
+                if (getRndInteger(1, 2) == 2) {
+                    inv.push('shield');
+                }
+                var weapons = ['dagger', 'longsword', 'mace', 'shortbow (20 arrows)',
+                    'shortsword', 'warhammer' ]
+                inv.push(choose(weapons));
+                inv.push(choose(weapons));
+                return inv;
+            }
+
+            class_skills() {
+                // let skills = new Map();
+                // default_skills.forEach((val, key, map) => {
+                //     skills.set(key, val);
+                // })
+                // return skills;
+                return new Map([
+                    ["Listen", [0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]],
+                    ["Spot", [0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]],
+                    ["Survival", [0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]]
+                ])
+            }
+        }
+
+        class Enchanter {
+            constructor() {
+                this.name = "Enchanter";
+                this.hd = 6;
+                this.max_level = 15;
+                this.xp_progression = [1750, 3500, 7000, 14000, 28000, 56000,
+                    112000, 220000, 340000, 460000, 580000,
+                    700000, 820000, 940000];
+                this.to_hit_array = to_hit_semi_martial;
+                this.post_name_level_hp_gain = 1;
+                this.doom = [11, 11, 10, 10, 9, 9, 8, 8, 7, 7, 6, 6, 5, 5, 4]
+                this.ray = [12, 12, 11, 11, 10, 10, 9, 9, 8, 8, 7, 7, 6, 6, 5]
+                this.hold = [13, 13, 12, 12, 11, 11, 10, 10, 9, 9, 8, 8, 7, 7, 6]
+                this.blast = [16, 16, 15, 15, 14, 14, 13, 13, 12, 12, 11, 11, 10, 10, 9]
+                this.spell = [14, 14, 13, 13, 12, 12, 11, 11, 10, 10, 9, 9, 8, 8, 7]
+                this.specs = wrap('May use light and medium armor and small and medium weapons. Learns magic runes and glamours. Can use arcane-only items, like magician\'s scrolls. 2-6 chance that benefical divine magic will fail on them.');
+                this.extra_langugages = ['Voltali']
+                this.xp_mod = (abis) => calculate_xp_mod([abis.charisma, abis.intelligence])
+                this.alignments = default_alignments;
+            }
+
+            class_equipment() {
+                var inv = [];
+                if (getRndInteger(1, 3) > 1) {
+                    inv.push(choose(['gambeson', 'chain mail']));
+                }
+                var weapons = ['club', 'dagger', 'longsword', 'shortbow (20 arrows)',
+                    'spear', 'staff' ]
+                inv.push(choose(weapons));
+                inv.push(choose(weapons));
+                return inv;
+            }
+
+            class_skills() {
+                let skills = new Map([
+                    ["Listen", [0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]],
+                    ["Spot", [0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]],
+                    ["Survival", [0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]]
+                ])
+                skills.set("Detect Magic", [0, 6, 6, 5, 5, 5, 4, 4, 4, 3, 3, 3, 3, 3, 3, 3])
+                return skills;
+            }
+        }
+
+        class Fighter {
+            constructor() {
+                this.name = "Fighter";
+                this.hd = 8;
+                this.max_level = 15;
+                this.xp_progression = [2000, 4000, 8000, 16000, 32000, 64000,
+                    128000, 260000, 380000, 500000, 620000,
+                    740000, 860000, 980000]
+                this.to_hit_array = to_hit_martial;
+                this.post_name_level_hp_gain = 2;
+                this.doom = [12, 12, 11, 10, 10, 9, 8, 8, 7, 6, 6, 5, 4, 4, 3]
+                this.ray = [13, 13, 12, 11, 11, 10, 9, 9, 8, 7, 7, 6, 5, 5, 4]
+                this.hold = [14, 14, 13, 12, 12, 11, 10, 10, 9, 8, 8, 7, 6, 6, 5]
+                this.blast = [15, 15, 14, 13, 13, 12, 11, 11, 10, 9, 9, 8, 7, 7, 6]
+                this.spell = [16, 16, 15, 14, 14, 13, 12, 12, 11, 10, 10, 9, 8, 8, 7]
+                this.specs = wrap('Proficient with all armor, weapons, and shields. Receives combat talents at levels 2, 6, 10, and 14.');
+                this.extra_langugages = []
+                this.xp_mod = (abis) => calculate_xp_mod([abis.strength])
+                this.alignments = default_alignments
+            }
+            class_equipment() {
+                var inv = [];
+                inv.push(choose(armor));
+                if (getRndInteger(1, 2) == 2) {
+                    inv.push('shield');
+                }
+                var weapons = ['crossbow (20 quarrels)', 'dagger', 'longsword', 'mace', 'shortsword', 'spear']
+                inv.push(choose(weapons));
+                inv.push(choose(weapons));
+                return inv;
+            }
+
+            class_skills() {
+                // let skills = new Map();
+                // default_skills.forEach((val, key, map) => {
+                //     skills.set(key, val);
+                // })
+                // return skills;
+                return new Map([
+                    ["Listen", [0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]],
+                    ["Spot", [0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]],
+                    ["Survival", [0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]]
+                ])
+            }
+
+            calc_xp_mod(abis) {
+
+            }
+        }
+
+        class Friar {
+            constructor() {
+                this.name = "Friar";
+                this.hd = 4;
+                this.max_level = 15;
+                this.xp_progression = [1750, 3500, 7000, 14000, 28000, 56000,
+                    112000, 220000, 340000, 460000, 580000,
+                    700000, 820000, 940000];
+                this.to_hit_array = to_hit_non_martial;
+                this.post_name_level_hp_gain = 1;
+                this.doom = [11, 11, 11, 10, 10, 10, 9, 9, 9, 8, 8, 8, 7, 7, 7];
+                this.ray = [12, 12, 12, 11, 11, 11, 10, 10, 10, 9, 9, 9, 8, 8, 8];
+                this.hold = [13, 13, 13, 12, 12, 12, 11, 11, 11, 10, 10, 10, 9, 9, 9];
+                this.blast = [16, 16, 16, 15, 15, 15, 14, 14, 14, 13, 13, 13, 12, 12, 12];
+                this.spell = [14, 14, 14, 13, 13, 13, 12, 12, 12, 11, 11, 11, 10, 10, 10];
+                this.specs = wrap('Wears no armor and casts divine magic. Can wield culinary instruments as simple weapons. Extra skilled at herbilism. Receives bonus armor class when wearing no armor. Must keep to a vow of poverty. Can turn the undead.')
+                this.extra_langugages = ['Voltali']
+                this.xp_mod = (abis) => calculate_xp_mod([abis.intelligence, abis.wisdom])
+                this.alignments = ["lawful", "neutral"]
+            }
+            class_equipment() {
+                var inv = ['monastic habit', 'wooden holy symbol'];
+                var weapons = ['club', 'club', 'dagger', 'dagger', 'sling (20 stones)', 'staff'];
+                inv.push(choose(weapons));
+                return inv;
+            }
+
+            class_skills() {
+                let skills = new Map([
+                    ["Listen", [0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]],
+                    ["Spot", [0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]],
+                    ["Survival", [0, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5]]
+                ])
+                return skills;
+            }
+        }
+
+        class Hunter {
+            constructor() {
+                this.name = "Hunter";
+                this.hd = 8;
+                this.max_level = 15;
+                this.xp_progression = [2250, 4500, 9000, 18000, 36000, 72000, 144000, 290000,
+                    420000, 550000, 680000, 810000, 940000, 1070000];
+                this.to_hit_array = to_hit_martial;
+                this.post_name_level_hp_gain = 2;
+                this.doom = [12, 12, 11, 10, 10, 9, 8, 8, 7, 6, 6, 5, 4, 4, 3];
+                this.ray = [13, 13, 12, 11, 11, 10, 9, 9, 8, 7, 7, 6, 5, 5, 4];
+                this.hold = [14, 14, 13, 12, 12, 11, 10, 10, 9, 8, 8, 7, 6, 6, 5];
+                this.blast = [15, 15, 14, 13, 13, 12, 11, 11, 10, 9, 9, 8, 7, 7, 6];
+                this.spell = [16, 16, 15, 14, 14, 13, 12, 12, 11, 10, 10, 9, 8, 8, 7];
+                this.specs = wrap("Uses light armor and shields and any weapons. Can forge a bond with an animal companion. +1 to missle attacks. Can capture trophies from creatures.")
+                this.extra_langugages = []
+                this.xp_mod = (abis) => calculate_xp_mod([abis.constitution, abis.dexterity])
+                this.alignments = default_alignments
+            }
+
+            class_equipment() {
+                let inv = ["gambeson"];
+                if (getRndInteger(1, 2) == 2) {
+                    inv.push('shield');
+                }
+                var weapons = ['dagger', 'longsword', 'longbow (20 arrows)', 'longbow (20 arrows)', 'shortsword', 'sling (20 stones)'];
+                inv.push(choose(weapons));
+                inv.push(choose(weapons));
+                return inv;
+            }
+
+            class_skills() {
+                let skills = new Map([
+                    ["Listen", [0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]],
+                    ["Spot", [0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]],
+                ])
+                skills.set("Alertness", [0, 6, 6, 6, 6, 5, 5, 5, 5, 4, 4, 4, 4, 3, 3, 2])
+                skills.set("Stalking",  [0, 6, 6, 6, 5, 5, 5, 5, 4, 4, 3, 3, 3, 3, 2, 2])
+                skills.set("Survival",  [0, 5, 4, 4, 4, 4, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2])
+                skills.set("Tracking",  [0, 5, 5, 4, 4, 4, 4, 3, 3, 3, 3, 3, 2, 2, 2, 2])
+                return skills;
+            }
+        }
+
+        class Knight {
+            constructor() {
+                this.name = "Knight";
+                this.hd = 8;
+                this.max_level = 15
+                this.xp_progression = [2250, 4500, 9000, 18000, 36000, 72000, 144000, 290000,
+                    420000, 550000, 680000, 810000, 940000, 1070000];
+                this.to_hit_array = to_hit_martial;
+                this.post_name_level_hp_gain = 2
+                this.doom = [12, 12, 11, 10, 10, 9, 8, 8, 7, 6, 6, 5, 4, 4, 3]
+                this.ray = [13, 13, 12, 11, 11, 10, 9, 9, 8, 7, 7, 6, 5, 5, 4]
+                this.hold = [12, 12, 11, 10, 10, 9, 8, 8, 7, 6, 6, 5, 4, 4, 3]
+                this.blast = [15, 15, 14, 13, 13, 12, 11, 11, 10, 9, 9, 8, 7, 7, 6]
+                this.spell = [15, 15, 14, 13, 13, 12, 11, 11, 10, 9, 9, 8, 7, 7, 6]
+                this.specs = wrap("Must serve a liege and bound to a code of chivalry. Trained horsemen. +2 to saves vs fairy magic. At level 5, Gain a +2 to attack and damage against large creatures. ")
+                this.extra_langugages = []
+                this.xp_mod = (abis) => calculate_xp_mod([abis.charisma, abis.strength])
+                this.alignments = default_alignments
+            }
+
+            class_equipment() {
+                let inv = [choose(["chain mail", "plate mail"])];
+                if (getRndInteger(1, 2) == 2) {
+                    inv.push('shield');
+                }
+                var weapons = ['dagger', 'lance', 'lance', 'lance', 'longsword', 'mace'];
+                inv.push(choose(weapons));
+                inv.push(choose(weapons));
+                return inv;
+            }
+
+            class_skills() {
+                return new Map([
+                    ["Listen", [0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]],
+                    ["Spot", [0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]],
+                    ["Survival", [0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]]
+                ])
+            }
+        }
+
+        class Magician {
+            constructor() {
+                this.name = "Magician";
+                this.hd = 4;
+                this.max_level = 15;
+                this.xp_progression = [2500, 5000, 10000, 20000, 40000,
+                    80000, 160000, 320000, 470000, 620000,
+                    770000, 920000, 1070000, 1220000]
+                this.to_hit_array = to_hit_non_martial;
+                this.post_name_level_hp_gain = 1;
+                this.doom = [14, 14, 14, 13, 13, 13, 12, 12, 12, 11, 11, 11, 10, 10, 10]
+                this.ray = [14, 14, 14, 13, 13, 13, 12, 12, 12, 11, 11, 11, 10, 10, 10]
+                this.hold = [13, 13, 13, 12, 12, 12, 11, 11, 11, 10, 10, 10, 9, 9, 9]
+                this.blast = [16, 16, 16, 15, 15, 15, 14, 14, 14, 13, 13, 13, 12, 12, 12]
+                this.spell = [14, 14, 14, 13, 13, 13, 12, 12, 12, 11, 11, 11, 10, 10, 10]
+                this.specs = wrap('Arcane spellcasting. May not wear armor.');
+                this.extra_langugages = []
+                this.xp_mod = (abis) => calculate_xp_mod([abis.intelligence])
+                this.alignments = default_alignments
+
+            }
+            //TODO: instrument generator?
+            class_equipment() {
+                var inv = ["Musical instrument (stringed or wind)"];
+                var weapons = ['dagger', 'staff'];
+                inv.push(choose(weapons));
+                var spellbooks = [
+                    'Charms of the Fey Court: (Fairy Servant, Ingratiate, Ventriloquism)',
+                    'Hogbrand\’s Incandescence: (Firelight, Ignite / Extinguish, Shield of Force.)',
+                    'Lord Oberon\’s Seals: (Decipher, Glyph of Sealing, Vapours of Dream)',
+                    'Oliphan\’s Folio: (Crystal Resonance, Ioun Shard, Shield of Force)',
+                    'Smythe\’s Illuminations: (Decipher, Ignite / Extinguish, Ioun Shard)',
+                    'The Treatise on Force and Dissolution: (Crystal Resonance, Floating Disc, Vapours of Dream)'
+                ]
+                inv.push(choose(spellbooks));
+                return inv;
+            }
+
+            class_skills() {
+                let skills = new Map([
+                    ["Listen", [0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]],
+                    ["Spot", [0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]],
+                    ["Survival", [0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]]
+                ])
+                skills.set("Detect Magic", [0, 6, 6, 5, 5, 5, 4, 4, 4, 3, 3, 3, 3, 3, 3, 3])
+                return skills;
+            }
+        }
+
+        class Minstrel {
+            constructor() {
+                this.name = "Minstrel"
+                this.hd = 6;
+                this.max_level = 15
+                this.xp_progression = [1750, 3500, 7000, 14000, 28000, 56000,
+                    112000, 220000, 340000, 460000, 580000,
+                    700000, 820000, 940000];
+                this.to_hit_array = to_hit_semi_martial
+                this.post_name_level_hp_gain = 1;
+                this.doom = [13, 13, 12, 12, 11, 11, 10, 10, 9, 9, 8, 8, 7, 7, 6]
+                this.ray = [14, 14, 13, 13, 12, 12, 11, 11, 10, 10, 9, 9, 8, 8, 7]
+                this.hold = [13, 13, 12, 12, 11, 11, 10, 10, 9, 9, 8, 8, 7, 7, 6]
+                this.blast = [15, 15, 14, 14, 13, 13, 12, 12, 11, 11, 10, 10, 9, 9, 8]
+                this.spell = [15, 15, 14, 14, 13, 13, 12, 12, 11, 11, 10, 10, 9, 9, 8]
+                this.specs = wrap("Use light and medium armor (no shields) and no heavy weapons. Can counter charm and enchant subjects when not in combat. Gets a few special skills.")
+                this.extra_langugages = [];
+                this.xp_mod = (abis) => calculate_xp_mod([abis.charisma, abis.dexterity])
+                this.alignments = default_alignments
+            }
+
+            class_equipment() {
+                let inv = [];
+                if (getRndInteger(1, 3) > 1) {
+                    inv.push(choose(["gambeson", "chain mail"]));
+                }
+                var weapons = ['club', '3 daggers', 'longword', 'sling (20 stones)', 'shortbow (20 arrows)', 'shortsword'];
+                inv.push(choose(weapons));
+                inv.push(choose(weapons));
+                return inv;
+            }
+
+            class_skills() {
+                let skills = new Map([
+                    ["Listen", [0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]],
+                    ["Spot", [0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]],
+                    ["Survival", [0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]]
+                ])
+                skills.set("Decipher Doc.", [0, 6, 5, 5, 5, 5, 4, 4, 4, 4, 3, 3, 3, 2, 2, 2])
+                skills.set("Legerdemain",   [0, 6, 6, 6, 5, 5, 5, 5, 4, 4, 4, 3, 3, 3, 3, 2])
+                skills.set("Listen",        [0, 5, 5, 5, 5, 4, 4, 4, 4, 3, 3, 3, 3, 3, 2, 2])
+                skills.set("Monster Lore",  [0, 5, 5, 4, 4, 4, 4, 3, 3, 3, 3, 3, 2, 2, 2, 2])
+                return skills;
+            }
+        }
+
+        class Thief {
+            constructor() {
+                this.name = "Thief";
+                this.hd = 4;
+                this.max_level = 15;
+                this.xp_progression = [1200, 2400, 4800, 9600, 19200, 38400,
+                    76800, 150000, 270000, 390000, 510000,
+                    630000, 750000, 870000]
+                this.to_hit_array = to_hit_semi_martial;
+                this.post_name_level_hp_gain = 1;
+                this.doom = [13, 13, 12, 12, 11, 11, 10, 10, 9, 9, 8, 8, 7, 7, 6]
+                this.ray = [14, 14, 13, 13, 12, 12, 11, 11, 10, 10, 9, 9, 8, 8, 7]
+                this.hold = [13, 13, 12, 12, 11, 11, 10, 10, 9, 9, 8, 8, 7, 7, 6]
+                this.blast = [15, 15, 14, 14, 13, 13, 12, 12, 11, 11, 10, 10, 9, 9, 8]
+                this.spell = [15, 15, 14, 14, 13, 13, 12, 12, 11, 11, 10, 10, 9, 9, 8]
+                this.specs = wrap('May back-stab with dagger at +4 to hit and 3d4 damage, against small and medium mortals, faeries, or demi-fey. Proficient with all weapons, but only light armor. Able to climb sheer surfaces, find or remove treasure traps, hear subtle noises, hide in shadows, move silently, open locks, and pick pockets.');
+                this.extra_langugages = ['Thieves\' Cant']
+                this.xp_mod = (abis) => calculate_xp_mod([abis.dexterity])
+                this.alignments = default_alignments
+            }
+            class_equipment() {
+                var inv = ['thieves\' tools'];
+                if (getRndInteger(1, 2) == 2) {
+                    inv.push('gambeson');
+                }
+                var weapons = ['club', '3 daggers', 'longsword', 'shortbow (20 arrows)',
+                    'shortsword', 'sling (20 stones)' ]
+                inv.push(choose(weapons));
+                inv.push(choose(weapons));
+                return inv;
+            }
+
+            class_skills() {
+                let skills = new Map([
+                    ["Listen", [0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]],
+                    ["Spot", [0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]],
+                    ["Survival", [0, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]]
+                ])
+                skills.set("Climb Wall",    [0, 4, 4, 4, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2])
+                skills.set("Decipher Doc.", [0, 6, 6, 6, 5, 5, 5, 5, 4, 4, 4, 4, 3, 3, 3, 2])
+                skills.set("Disarm Mech.",  [0, 6, 5, 5, 5, 5, 4, 4, 4, 4, 3, 3, 3, 3, 2, 2])
+                skills.set("Legerdemain",   [0, 6, 6, 5, 5, 5, 5, 4, 4, 4, 4, 3, 3, 3, 3, 2])
+                skills.set("Listen",        [0, 6, 6, 5, 5, 5, 5, 4, 4, 4, 4, 3, 3, 3, 2, 2])
+                skills.set("Pick Lock",     [0, 5, 5, 5, 5, 4, 4, 4, 4, 3, 3, 3, 2, 2, 2, 2])
+                skills.set("Search",        [0, 6, 5, 5, 5, 5, 4, 4, 4, 4, 3, 3, 3, 2, 2, 2])
+                skills.set("Stealth",       [0, 5, 5, 5, 5, 4, 4, 4, 4, 3, 3, 3, 3, 2, 2, 2])
+                return skills;
+            }
+        }
+
+        cleric_spells_per_day = [
+            [0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0],
+            [0, 1, 0, 0, 0, 0],
+            [0, 2, 0, 0, 0, 0],
+            [0, 2, 1, 0, 0, 0],
+            [0, 2, 2, 0, 0, 0],
+            [0, 2, 2, 1, 0, 0],
+            [0, 3, 2, 2, 0, 0],
+            [0, 3, 2, 2, 0, 0],
+            [0, 3, 3, 2, 1, 0],
+            [0, 3, 3, 2, 2, 0],
+            [0, 4, 3, 3, 2, 0],
+            [0, 4, 4, 3, 2, 1],
+            [0, 4, 4, 3, 2, 2],
+            [0, 4, 4, 3, 3, 2],
+            [0, 5, 4, 4, 3, 2]
+        ]
+
+        mu_spells_per_day = [
+            [0, 0, 0, 0, 0, 0, 0],
+            [0, 1, 0, 0, 0, 0, 0],
+            [0, 2, 0, 0, 0, 0, 0],
+            [0, 2, 1, 0, 0, 0, 0],
+            [0, 2, 2, 0, 0, 0, 0],
+            [0, 2, 2, 1, 0, 0, 0],
+            [0, 3, 2, 2, 0, 0, 0],
+            [0, 3, 3, 2, 1, 0, 0],
+            [0, 3, 3, 2, 2, 0, 0],
+            [0, 3, 3, 2, 2, 1, 0],
+            [0, 4, 3, 3, 2, 2, 0],
+            [0, 4, 3, 3, 2, 2, 1],
+            [0, 4, 4, 3, 3, 2, 2],
+            [0, 4, 4, 3, 3, 3, 2],
+            [0, 5, 4, 4, 3, 3, 2],
+            [0, 5, 4, 4, 3, 3, 3]
+        ]
+
+        cleric_spells = [
+            null,
+            ['cure light wounds', 'detect evil', 'detect magic', 'light',
+                'protection from evil', 'purify food and water', 'remove fear',
+                'resist cold'],
+            ['bless', 'find traps', 'hold person', 'know alignment', 'resist fire',
+                'silence (15\') radius', 'snake charm', 'speak with animals'],
+            ['continual light', 'cure disease', 'growth of animal',
+                'locate object', 'remove curse', 'striking'],
+            ['create water', 'cure serious wounds', 'neutralize poison',
+                'protection from evil (10\' radius)', 'speak with plants',
+                'sticks to snakes'],
+            ['commune', 'create food', 'dispel evil', 'insect plague', 'quest',
+                'raise dead']
+        ]
+
+        mu_spells = [
+            null,
+            ['charm person', 'detect magic', 'floating disc', 'hold portal', 'light',
+                'magic missile', 'protection from evil', 'read languages', 'read magic',
+                'shield', 'sleep', 'ventriloquism'],
+            ['continual light', 'detect evil', 'detect invisible', 'ESP',
+                'invisibility', 'knock', 'levitate', 'locate object', 'mirror image',
+                'phantasmal force', 'web', 'wizard lock'],
+            ['clairvoyance', 'dispel magic', 'fireball', 'fly', 'haste', 'hold person',
+                'infravistion', 'invisibility (10\' radius)', 'lightning bolt',
+                'protection from evil (10\' radius)', 'protection from normal missiles',
+                'water breathing'],
+            ['charm monster', 'confusion', 'dimension door', 'growth of plants',
+                'hallucinatory terrain', 'massmorph', 'polymorph others',
+                'polymorph self', 'remove curse', 'wall of fire', 'wall of ice',
+                'wizard eye'],
+            ['animate dead', 'cloudkill', 'conjeure elemental', 'contact higher plane',
+                'feeblemind', 'hold monster', 'magic jar', 'pass-wall', 'telekenesis',
+                'teleport', 'transmute rock to mud', 'wall of stone'],
+            ['anti-magic shell', 'control weather', 'death spell', 'disintegrate',
+                'geas', 'invisible stalker', 'lower water', 'move earth', 'part water',
+                'projected image', 'reincarnation', 'stone to flesh'],
+        ]
+
+        function generate_spellbook(caster_level) {
+            var spells = [];
+            for (i = 1; i < 7; i++) {
+                var available_spells = mu_spells[i];
+                for (k = 0; k < mu_spells_per_day[caster_level][i]; k++) {
+                    var random_spell = choose(available_spells);
+                    spells.push(random_spell);
+                    available_spells = available_spells.filter(k => k !== random_spell);
+                }
+            }
+            return wrap(spells.join(', '));
+        }
+
+        class Character {
+            constructor(name = '', abis = null, char_class = null, kindred = null) {
+                this.name = name;
+                if (char_class === null) {
+                    this.char_class = new Fighter();
+                } else {
+                    this.char_class = new char_class;
+                }
+                if (abis === null) {
+                    this.abis = new Abilities();
+                } else {
+                    this.abis = abis;
+                }
+
+                if (kindred == null) {
+                    this.kindred = new Breggle();
+                } else {
+                    this.kindred = new kindred;
+                }
+                this.background = choose(this.kindred.bgs);
+                this.personality = get_personality();
+                this.level = 1;
+                this.xp = 0;
+                this.hp = this.generate_hp();
+                this.inventory = this.generate_inventory();
+                this.appearance = get_appearance();
+                this.skills = resolve_skills(this.char_class.class_skills(), this.kindred.kindred_skills);
+                this.xp_mod = this.calc_xp_mod();
+                this.alignment = choose(this.char_class.alignments);
+            }
+            level_up() {
+                if (this.level < this.char_class.max_level) {
+                    if (this.level < 10) {
+                        this.hp += this.generate_hp();
+                    } else {
+                        this.hp += this.char_class.post_name_level_hp_gain;
+                    }
+                    this.xp = this.char_class.xp_progression[this.level - 1]
+                    this.level += 1;
+                }
+            }
+            generate_inventory() {
+                var inv_array = get_generic_gear();
+                inv_array = inv_array.concat(this.char_class.class_equipment());
+                const coins = d(3, 6);
+                this.encumbrance = 80 + coins;
+                for (const k of inv_array) {
+                    if (Object.keys(encumbrances).includes(k)) {
+                        this.encumbrance += encumbrances[k];
+                    }
+                }
+                inv_array.push(`gold pieces (${coins})`);
+                inv_array.sort();
+                var inv = inv_array.join(', ');
+                inv = wrap(inv, 120);
+                return inv;
+            }
+            generate_hp() {
+                return Math.max(d(1, this.char_class.hd) + Number(this.abis.conmod), 1);
+            }
+            calc_xp_mod() {
+                let mod = this.char_class.xp_mod(this.abis);
+                if (this.kindred.name == "Human") {
+                    mod += 10;
+                }
+                return `${mod}%`;
+            }
+            get move() {
+                if (this.encumbrance > 800) {
+                    return '10\'';
+                } else if (this.encumbrance > 600) {
+                    return '20\'';
+                } else if (this.encumbrance > 400) {
+                    return '30\'';
+                } else {
+                    return '40\'';
+                }
+            }
+            get ac() {
+                var inv = this.inventory.replace(/\n/g, ' ')
+                if (inv.includes('plate mail')) {
+                    var base_ac = 16;
+                } else if (inv.includes('pinecone')) {
+                    var base_ax = 15;
+                } else if (inv.includes('chain mail')) {
+                    var base_ac = 14;
+                } else if (inv.includes('bark')) {
+                    var base_ax = 13;
+                } else if (inv.includes('gambeson')) {
+                    var base_ac = 12;
+                } else {
+                    var base_ac = 10;
+                }
+                if (this.inventory.includes('shield')) {
+                    base_ac += 1;
+                }
+                if (this.char_class.name == "Friar") {
+                    if (this.level >= 11) {
+                        base_ac += 5;
+                    } else if (this.level >= 7) {
+                        base_ac += 4;
+                    } else if (this.level >= 4) {
+                        base_ac += 3;
+                    } else {
+                        base_ac += 2;
+                    }
+                }
+                return base_ac + Number(this.abis.dexmod);
+            }
+            get base_to_hit() {
+                return this.char_class.to_hit_array[this.level - 1]
+            }
+            get melee_to_hit() {
+                return this.base_to_hit + Number(this.abis.strmod);
+            }
+            get ranged_to_hit() {
+                if (this.char_class.name == "Hunter") {
+                    return this.base_to_hit + Number(this.abis.dexmod) + 1;
+                } else {
+                    return this.base_to_hit + Number(this.abis.dexmod);
+                }
+            }
+            get doom() {
+                return this.char_class.doom[this.level - 1];
+            }
+            get ray() {
+                return this.char_class.ray[this.level - 1];
+            }
+            get hold() {
+                return this.char_class.hold[this.level - 1];
+            }
+            get blast() {
+                return this.char_class.blast[this.level - 1];
+            }
+            get spell() {
+                return this.char_class.spell[this.level - 1];
+            }
+            gen_skills() {
+                var text = "";
+                this.skills.forEach((value, key, map) => {
+                    text = text + `, ${key}: ${value[this.level]}`
+                });
+                //hypothetically remove the first comma
+                return wrap(text.replace(", ", ""));
+            }
+            get languages() {
+                var langs = ["Phaedren"].concat(this.char_class.extra_langugages);
+                return langs.join(", ");
+            }
+            get character_sheet() {
+                const ncol = 23;
+                var name_bit = `Name: ${this.name}`.padEnd(ncol);
+                var level_bit = `Level: ${this.level}`.padEnd(ncol);
+                var class_bit = `Class: ${this.char_class.name}`.padEnd(ncol);
+                var kindred_bit = `Kindred: ${this.kindred.name}`.padEnd(ncol);
+                var alignment_bit = `Alignment: ${this.alignment}`.padEnd(ncol);
+                var statblock = this.abis.say_abis().split('\n');
+                statblock[1] += `    HP:           ${pad(2, this.hp)}`;
+                statblock[2] += `    AC:           ${pad(2, this.ac)}`;
+                statblock[3] += `    Atk (melee):  ${pad(2, this.melee_to_hit)}`;
+                statblock[4] += `    Atk (ranged): ${pad(2, this.ranged_to_hit)}`;
+                statblock[5] += `    MOVEMENT: ${pad(6, this.move)}`;
+                statblock[6] += `    XP:      ${pad(7, this.xp)}`;
+
+                statblock[1] += `    DOOM:      ${this.doom}`
+                statblock[2] += `    RAY:       ${this.ray}`
+                statblock[3] += `    HOLD:      ${this.hold}`
+                statblock[4] += `    BLAST:     ${this.blast}`
+                statblock[5] += `    SPELL:     ${this.spell}`
+                statblock[6] += `    MAGIC RES: ${this.abis.wismod}`
+                var spells = '';
+                if (this.char_class.name === 'Cleric') {
+                    var spd = cleric_spells_per_day[this.level].slice(1);
+                    var prepped = [];
+                    for (i = 1; i < 6; i++) {
+                        for (var j = 0; j < spd[i - 1]; j++) {
+                            prepped.push(choose(cleric_spells[i]));
+                        }
+                    }
+                    prepped = wrap(consolidator(prepped).join(', '));
+                    spd = `\nSPELLS PER DAY (BY LEVEL): ${spd.join(', ')}`;
+                    spells = `${spd}\n\nPREPARED SPELLS:\n${prepped}\n`;
+                } else if (this.char_class.name === 'Magician'
+                    || this.char_class.name === 'Elf') {
+                    const spd = mu_spells_per_day[this.level].slice(1).join(', ');
+                    const book = generate_spellbook(this.level);
+                    spells = `\nSPELLS PER DAY (BY LEVEL): ${spd}\n\nSPELLBOOK:\n${book}\n`;
+                }
+                return `
+${name_bit}Background: ${this.background}
+${level_bit}Appearance: ${this.appearance}
+${class_bit}Personality: ${this.personality}
+${kindred_bit}XP Mod: ${this.xp_mod}
+${alignment_bit}
+${statblock.join('\n')}
+
+SKILL TARGETS:
+${this.gen_skills()}
+
+SPECIAL ABILITIES:
+${this.char_class.specs}
+${spells}
+EQUIPMENT:
+${this.inventory}
+
+LANGUAGES: 
+${this.languages}
+
+ENCUMBRANCE:
+${this.encumbrance} coins-weight`;
+            }
+        }
+    </script>
+</head>
+
+<body onload="roll_up_char()">
+    <div style="max-width:500px; margin:auto">
+        <h1 style="font-family:'Eagle Lake';text-align:center;">Random OSR Character</h1>
+        <p style="font-family:'IM Fell DW Pica';text-align:justify;">These characters are <a
+                href="https://oldschoolessentials.necroticgnome.com/srd/index.php/Main_Page">1981 B/X</a> by-the-book
+            with a few minor exceptions. Gambeson is substituted for leather armor. Characters get max HP at first
+            level. THAC0 is used instead of the OG to-hit matrix.</p>
+        <label for="level">Level: </label>
+        <input type="number" name="level" id="level" value=1 style="width:3em">
+        <label for="classy">Class: </label>
+        <select name="classy" id="classy">
+            <option value="rando">rando</option>
+            <option value="cleric">cleric</option>
+            <option value="enchanter">enchanter</option>
+            <option value="fighter">fighter</option>
+            <option value="friar">friar</option>
+            <option value="hunter">hunter</option>
+            <option value="knight">knight</option>
+            <option value="magician">magician</option>
+            <option value="minstrel">minstrel</option>
+            <option value="thief">thief</option>
+        </select>
+        <label for="kindred">Kindred: </label>
+        <select name="kindred" id="kindred">
+            <option value="breggle">breggle</option>
+            <option value="elf">elf</option>
+            <option value="grimalkin">grimalkin</option>
+            <option value="human">human</option>
+            <option value="mossling">mossling</option>
+        </select>
+        <button
+            onclick="roll_up_char(
+                document.getElementById('level').value,
+                document.getElementById('classy').value,
+                document.getElementById('kindred').value)">Let's roll!</button>
+        <br>
+        <input type="checkbox" id="use_stat_input" name="use_stat_input" />
+        <label for="use_stat_input">use entered stats</label>
+        <br>
+        <label for="str">STR: </label>
+        <input type="number" name="str" id="str" value=10 min="1" max="18" style="width:3em">
+        <label for="int">INT: </label>
+        <input type="number" name="int" id="int" value=10 min="1" max="18" style="width:3em">
+        <label for="wis">WIS: </label>
+        <input type="number" name="wis" id="wis" value=10 min="1" max="18" style="width:3em">
+        <br>
+        <label for="dex">DEX: </label>
+        <input type="number" name="dex" id="dex" value=10 min="1" max="18" style="width:3em">
+        <label for="con">CON: </label>
+        <input type="number" name="con" id="con" value=10 min="1" max="18" style="width:3em">
+        <label for="cha">CHA: </label>
+        <input type="number" name="cha" id="cha" value=10 min="1" max="18" style="width:3em">
+        <pre id="sheet" style="font-family: 'Courier Prime', monospace;font-size:0.87em;"></pre>
+    </div>
+    <script>
+        function roll_up_char(level = 1, cls = 'rando', kin = 'breggle') {
+            var abis = new Abilities();
+            if (cls === 'rando') {
+                max_abi = Math.max(...abis.abi_list);
+                if (abis.strength === max_abi) {
+                    if (abis.intelligence > 9 && Math.random() < 0.07) {
+                        cls = 'elf';
+                    } else {
+                        cls = 'fighter';
+                    }
+                } else if (abis.constitution > 9 && abis.constitution === max_abi
+                    && Math.random() < 0.4) {
+                    cls = 'dwarf';
+                } else if (abis.dexterity === max_abi) {
+                    if (abis.constitution > 9 && abis.dexterity > 9 && Math.random() < 0.2) {
+                        cls = 'halfling';
+                    } else {
+                        cls = 'thief';
+                    }
+                } else if (abis.intelligence === max_abi) {
+                    if (abis.intelligence > 9 && Math.random() < 0.7) {
+                        cls = 'elf';
+                    } else {
+                        cls = 'magic user';
+                    }
+                } else if (abis.wisdom === max_abi) {
+                    cls = 'cleric';
+                } else {
+                    cls = ['cleric', 'fighter',
+                        'magic user', 'thief'][Math.floor(Math.random() * 7)]
+                }
+            }
+            classes = {
+                cleric: Cleric,
+                enchanter: Enchanter,
+                fighter: Fighter,
+                friar: Friar,
+                hunter: Hunter,
+                knight: Knight,
+                magician: Magician,
+                minstrel: Minstrel,
+                thief: Thief
+            }
+            kindred = {
+                breggle: Breggle,
+                elf: Elf,
+                grimalkin: Grimalkin,
+                human: Human,
+                mossling: Mossling
+            }
+            var foo = new Character('', abis, classes[cls], kindred[kin]);
+            for (i = 0; i < level - 1; i++) {
+                foo.level_up()
+            }
+            document.getElementById('sheet').innerHTML = foo.character_sheet;
+        }
+    </script>
+</body>
+
+</html>
