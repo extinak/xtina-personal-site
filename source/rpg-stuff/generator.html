@@ -345,7 +345,7 @@ Charisma:     ${pad(2, this.charisma)} ${this.chamod}`
                     "Turnip farmer",
                     "Vagrant"
                 ]
-                this.heads = [
+                this.head = [
                     "Dented helm with coat of arms",
                     "Ears pierced with nails or rings",
                     "Long, curly locks",
@@ -359,7 +359,155 @@ Charisma:     ${pad(2, this.charisma)} ${this.chamod}`
                     "Thin neck, hefty head",
                     "Third nub horn on forehead"
                 ]
+                this.face = [
+                    "Black eyes, silver pupils",
+                    "Buck teeth",
+                    "Bushy brows",
+                    "Golden eyes",
+                    "Lank forelock droops over eyes",
+                    "Long, wispy chin-beard",
+                    "Milky white eyes, blue flecks",
+                    "Missing teeth",
+                    "Prominent scar",
+                    "Shaggy chin-beard",
+                    "Small eyes, close set",
+                    "Wide, drooling mouth"
+                ]
+                this.body = [
+                    "Black, flecked with silver",
+                    "Black, glossy",
+                    "Ginger, curly",
+                    "Ginger, rough",
+                    "Grey, greasy",
+                    "Grey, lustrous",
+                    "Russet, spiky",
+                    "Russet, wavy",
+                    "Tan, coarse",
+                    "Tan, shaggy",
+                    "White, dirty",
+                    "White, fluffy"
+                ]
+                this.speech = [
+                    "Cackling",
+                    "Circuitous",
+                    "Coarse",
+                    "Gurgling",
+                    "High-pitched",
+                    "Lackadaisical",
+                    "Mumbling",
+                    "Rumbling",
+                    "Staccato",
+                    "Throaty",
+                    "Warbling",
+                    "Whining"
+                ]
+                this.demeanour = [
+                    "Ale-addled",
+                    "Cool-headed pragmatist",
+                    "Cultivated aristocratic air",
+                    "Dour, pessimistic",
+                    "Earnest, loyal",
+                    "Endlessly scheming",
+                    "Flighty, mercurial",
+                    "Jocular with violent outbursts",
+                    "Mellow, unflappable",
+                    "Single-minded, stubborn",
+                    "Wild hedonist",
+                    "Wryly philosophical"
+                ]
+                this.dress = [
+                    "Doublet and frilly shirt",
+                    "Greasy woollens",
+                    "Grimy apron",
+                    "Huge, hairy overcoat",
+                    "Long skirts and cloak",
+                    "Patched leather, many pockets",
+                    "Rabbit and squirrel fur",
+                    "Servant’s livery",
+                    "Thigh boots and waistcoat",
+                    "Thong and dashing cape",
+                    "Tweed and deerstalker",
+                    "Wide, armless frock"
+                ]
+                this.desires = [
+                    "Eradicate the Drune",
+                    "Escape justice for past crime",
+                    "Found a crime syndicate",
+                    "Free the common folk",
+                    "Imprison all crookhorns",
+                    "Marry into nobility",
+                    "Outrageous wealth and luxury",
+                    "Popularise turnip ale",
+                    "Recover ancient breggle lore",
+                    "Restore High Wold to Ramius",
+                    "Swindle Lord Murkin\’s wealth",
+                    "Travel and discovery"
+                ]
+                this.beliefs = [
+                    "Ancestors demand sacrifices",
+                    "Breggles made standing stones",
+                    "Breggles originate in Fairy",
+                    "Church hides breggle saints",
+                    "Daily garlic wards fairy hexes",
+                    "Descendant of a mighty wizard",
+                    "Duke is thrall of the Drune",
+                    "Fairy is purely mythical",
+                    "Malbleat serves the Nag-Lord",
+                    "Malbleat will rule High Wold",
+                    "Nag-Lord is breggle messiah",
+                    "The end is nigh"
+                ]
                 this.kindred_skills = new Map();
+            }
+
+            get char_name() {
+                let first_name = [
+                    "Aele","Aedel","Addle", 
+                    "Braembel","Berrild","Andred", 
+                    "Broob","Bredhr","Blocke", 
+                    "Crump", "Draed", "Clover",
+                    "Drerdl", "Fannigrew", "Crewwin", 
+                    "Frennig", "Frandorup", "Curlip", 
+                    "Grerg", "Grendilore", "Eleye",
+                    "Gripe", "Grendl", "Ellip", 
+                    "Llerg", "Grewigg", "Frannidore", 
+                    "Llrod", "Hildrup", "Ghrend", 
+                    "Lope", "Hraigl", "Grennigore", 
+                    "Mashker", "Hwendl", "Gwendl", 
+                    "Olledg", "Maybel", "Hrannick",
+                    "Rheg", "Myrkle", "Hwoldrup", 
+                    "Shadgore", "Nannigrew", "Lindor",
+                    "Shadwell", "Pettigrew", "Merrild", 
+                    "Shadwicke", "Rrhimbr", "Smenthard", 
+                    "Shandor", "Shord", "Snerg", 
+                    "Shank", "Smethra", "Wendlow", 
+                    "Snerd", "Wheld", "Windor"
+                ]
+
+                let surname = [
+                    "Blathergripe",
+                    "Bluegouge",
+                    "Bockbrugh",
+                    "Bockstump",
+                    "Elbowgen",
+                    "Forlocke",
+                    "Hwodlow",
+                    "Lankshorn",
+                    "Lockehorn",
+                    "Longbeard",
+                    "Longshanks",
+                    "Shankwold",
+                    "Smallbuck",
+                    "Snicklebock",
+                    "Snidebleat",
+                    "Snoode",
+                    "Underbleat",
+                    "Underbuck",
+                    "Wolder",
+                    "Woldleap"
+                ]
+
+                return `${choose(first_name)} ${choose(surname)}`
             }
         }
 
@@ -550,7 +698,7 @@ Charisma:     ${pad(2, this.charisma)} ${this.chamod}`
                 this.blast = [16, 16, 15, 15, 14, 14, 13, 13, 12, 12, 11, 11, 10, 10, 9]
                 this.spell = [14, 14, 13, 13, 12, 12, 11, 11, 10, 10, 9, 9, 8, 8, 7]
                 this.specs = wrap('May use light and medium armor and small and medium weapons. Learns magic runes and glamours. Can use arcane-only items, like magician\'s scrolls. 2-6 chance that benefical divine magic will fail on them.');
-                this.extra_langugages = ['Voltali']
+                this.extra_langugages = []
                 this.xp_mod = (abis) => calculate_xp_mod([abis.charisma, abis.intelligence])
                 this.alignments = default_alignments;
             }
@@ -972,6 +1120,33 @@ Charisma:     ${pad(2, this.charisma)} ${this.chamod}`
                 'projected image', 'reincarnation', 'stone to flesh'],
         ]
 
+        glamours = [
+            'awe', 'beguilement', 'breath of the wind', 'cloak of darkness', 'conjure treats',
+                'dancing flame', 'disguise object', 'fairy dust', 'flame charm', 'fool\'s gold',
+                'forgetting', 'masquerade', 'mirth and malice', 'moon sight', 'seeming',
+                'silver tongue', 'subtle sight', 'through the keyhole', 'vanishing', 'walk in shadows'
+        ]
+
+        lesser_runes = [
+            'deathly blossom', 'fog cloud', 'gust of wind', 'proof against deadly harm', 
+                'rune of vanishing', 'sway the mortal mind'
+        ]
+
+        greater_runes = [
+            'arcane unbinding', 'fairy gold', 'fairy steed', 'ice storm', 'rune of invisibilty',
+                'sway the mind'
+        ]
+
+        might_runes = [
+            'dream ship', 'eternal slumber', 'rune of death', 'rune of wishing', 'summon wild hunt',
+                'unravel death'
+        ]
+
+        knacks = [
+            'bird friend', 'lock singer', 'root friend',
+            'thread whistling', 'wood keaning', 'yeast master'
+        ]
+
         function generate_spellbook(caster_level) {
             var spells = [];
             for (i = 1; i < 7; i++) {
@@ -1131,16 +1306,27 @@ Charisma:     ${pad(2, this.charisma)} ${this.chamod}`
                 return wrap(text.replace(", ", ""));
             }
             get languages() {
-                var langs = ["Phaedren"].concat(this.char_class.extra_langugages);
+                var langs = ["Phaedren"]
+                    .concat(this.kindred.languages)
+                    .concat(this.char_class.extra_langugages);
                 return langs.join(", ");
             }
             get character_sheet() {
-                const ncol = 23;
-                var name_bit = `Name: ${this.name}`.padEnd(ncol);
+                const ncol = 30;
+                var name_bit = `Name: ${this.kindred.char_name}`.padEnd(ncol);
                 var level_bit = `Level: ${this.level}`.padEnd(ncol);
                 var class_bit = `Class: ${this.char_class.name}`.padEnd(ncol);
                 var kindred_bit = `Kindred: ${this.kindred.name}`.padEnd(ncol);
                 var alignment_bit = `Alignment: ${this.alignment}`.padEnd(ncol);
+                //let head_bit = `Head: ${choose(this.kindred.head)}`.padEnd(ncol);
+                //let face_bit = `Face: ${choose(this.kindred.face)}`.padEnd(ncol);
+                //let body_bit = `Body: ${choose(this.kindred.body)}`.padEnd(ncol);
+                //let speech_bit = `Speech: ${choose(this.kindred.speech)}`.padEnd(ncol);
+                //let demeanour_bit = `Demeanour: ${choose(this.kindred.demeanour)}`.padEnd(ncol);
+                //let dress_bit = `Dress: ${choose(this.kindred.dress)}`.padEnd(ncol);
+                //let desires_bit = `Desires: ${choose(this.kindred.desires)}`.padEnd(ncol*2);
+                //let beliefs_bit = `Beliefs: ${choose(this.kindred.beliefs)}`.padEnd(ncol*2);
+                
                 var statblock = this.abis.say_abis().split('\n');
                 statblock[1] += `    HP:           ${pad(2, this.hp)}`;
                 statblock[2] += `    AC:           ${pad(2, this.ac)}`;
@@ -1195,6 +1381,20 @@ ${this.languages}
 
 ENCUMBRANCE:
 ${this.encumbrance} coins-weight`;
+
+/*
+
+DESCRIPTION:
+Head: ${choose(this.kindred.head)}
+Face: ${choose(this.kindred.face)}
+Body: ${choose(this.kindred.body)}
+Speech: ${choose(this.kindred.speech)}
+Demeanor: ${choose(this.kindred.demeanour)}
+Dress: ${choose(this.kindred.dress)}
+Desires: ${choose(this.kindred.desires)}
+Beliefs: ${choose(this.kindred.beliefs)}`;
+
+*/
             }
         }
     </script>
@@ -1202,11 +1402,12 @@ ${this.encumbrance} coins-weight`;
 
 <body onload="roll_up_char()">
     <div style="max-width:500px; margin:auto">
-        <h1 style="font-family:'Eagle Lake';text-align:center;">Random OSR Character</h1>
-        <p style="font-family:'IM Fell DW Pica';text-align:justify;">These characters are <a
-                href="https://oldschoolessentials.necroticgnome.com/srd/index.php/Main_Page">1981 B/X</a> by-the-book
-            with a few minor exceptions. Gambeson is substituted for leather armor. Characters get max HP at first
-            level. THAC0 is used instead of the OG to-hit matrix.</p>
+        <h1 style="font-family:'Eagle Lake';text-align:center;">Xtina's Char Generator</h1>
+        <p style="font-family:'IM Fell DW Pica';text-align:justify;">You can use this generator to make character for 
+            Xtina's on-going Phaedra game. This uses rules adpoted from the yet-unreleased <a href="https://necroticgnome.com/collections/dolmenwood">Dolmenwood</a>. One other change is that 'gambeson' is substituted for leather armor.</p>
+        <p style="font-family:'IM Fell DW Pica';text-align:justify;">This tool is based (aka copied and added to) on <a href="https://chacowingnut.github.io/delvers/">this neat tool</a>.
+                My version of this tool is not yet complete, but should be usable to play around with.</p>
+        <p style="font-family:'IM Fell DW Pica';text-align:justify;">For playing in my games, feel free to reselect items instead of taking what the generator spits out.</p>
         <label for="level">Level: </label>
         <input type="number" name="level" id="level" value=1 style="width:3em">
         <label for="classy">Class: </label>
